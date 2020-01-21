@@ -3,9 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	_forumDelivery "github.com/Marshality/tech-db/forum/delivery"
+	_forumRepo "github.com/Marshality/tech-db/forum/repository"
+	_forumUcase "github.com/Marshality/tech-db/forum/usecase"
 	"github.com/Marshality/tech-db/middleware"
 	"github.com/Marshality/tech-db/tools"
-	"github.com/Marshality/tech-db/user/delivery"
+	_userDelivery "github.com/Marshality/tech-db/user/delivery"
 	_userRepo "github.com/Marshality/tech-db/user/repository"
 	_userUcase "github.com/Marshality/tech-db/user/usecase"
 	"github.com/labstack/echo"
@@ -47,12 +50,15 @@ func main() {
 
 	// Repositories
 	userRepo := _userRepo.NewUserRepository(dbConn)
+	forumRepo := _forumRepo.NewForumRepository(dbConn)
 
 	// Usecases
 	userUcase := _userUcase.NewUserUsecase(userRepo)
+	forumUcase := _forumUcase.NewForumUsecase(forumRepo, userUcase)
 
 	// Handlers
-	delivery.ConfigureUserHandler(e, userUcase)
+	_userDelivery.ConfigureUserHandler(e, userUcase)
+	_forumDelivery.ConfigureForumHandler(e, forumUcase)
 
 	log.Fatal(e.Start(config.Server.Host + ":" + config.Server.Port))
 }

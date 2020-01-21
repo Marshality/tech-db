@@ -72,6 +72,22 @@ func (ur *UserRepository) SelectByNickname(nickname string) (*models.User, error
 	return u, nil
 }
 
+func (ur *UserRepository) SelectByEmail(email string) (*models.User, error) {
+	u := &models.User{}
+
+	if err := ur.db.QueryRow("SELECT id, nickname, fullname, email, about FROM users WHERE email = $1",
+		email,
+	).Scan(&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return u, nil
+}
+
 func (ur *UserRepository) Update(u *models.User) error {
 	res, err := ur.db.Exec("UPDATE users SET about = $1, fullname = $2, email = $3 WHERE nickname = $4",
 		u.About, u.Fullname, u.Email, u.Nickname)

@@ -49,9 +49,15 @@ func (ur *UserUsecase) GetByNickname(nickname string) (*models.User, error) {
 }
 
 func (ur *UserUsecase) EditUser(u *models.User) error {
-	err := ur.repo.Update(u)
+	founded, err := ur.GetByNickname(u.Nickname)
 
 	if err != nil {
+		return err
+	}
+
+	founded.Map(u)
+
+	if err := ur.repo.Update(u); err != nil {
 		return err
 	}
 
