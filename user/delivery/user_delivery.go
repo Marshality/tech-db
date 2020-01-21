@@ -19,7 +19,8 @@ func ConfigureUserHandler(e *echo.Echo, ucase user.Usecase) {
 	}
 
 	e.POST("/api/user/:nickname/create", handler.CreateUser())
-	//TODO: e.GET("/api/user/:nickname/profile", handler.GetUserInfo())
+	e.GET("/api/user/:nickname/profile", handler.GetUserInfo())
+	e.POST("/api/user/:nickname/profile", handler.EditUserInfo())
 }
 
 func (uh *UserHandler) CreateUser() echo.HandlerFunc {
@@ -29,15 +30,13 @@ func (uh *UserHandler) CreateUser() echo.HandlerFunc {
 		Fullname string `json:"fullname"`
 	}
 
-	type Body map[string]interface{}
-
 	return func(c echo.Context) error {
 		nickname := c.Param("nickname")
 
 		request := &Request{}
 		if err := c.Bind(request); err != nil {
-			return c.JSON(http.StatusBadRequest, Body{
-				"error": "bad request",
+			return c.JSON(http.StatusBadRequest, Error{
+				Message: ErrHTTPBadRequest.Error(),
 			})
 		}
 
@@ -51,8 +50,9 @@ func (uh *UserHandler) CreateUser() echo.HandlerFunc {
 		users, err := uh.ucase.Store(u)
 
 		if err != ErrAlreadyExists && err != nil {
-			return c.JSON(http.StatusInternalServerError, Body{
-				"error": err.Error(),
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
 			})
 		}
 
@@ -62,5 +62,71 @@ func (uh *UserHandler) CreateUser() echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusCreated, u)
+	}
+}
+
+func (uh *UserHandler) GetUserInfo() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		nickname := c.Param("nickname")
+
+		u, err := uh.ucase.GetByNickname(nickname)
+
+		if err != ErrNotFound && err != nil {
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if u == nil {
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, u)
+	}
+}
+
+func (uh *UserHandler) EditUserInfo() echo.HandlerFunc {
+	type Request struct {
+		About    string `json:"about"`
+		Email    string `json:"email"`
+		Fullname string `json:"fullname"`
+	}
+
+	return func(c echo.Context) error {
+		nickname := c.Param("nickname")
+
+		request := &Request{}
+		if err := c.Bind(request); err != nil {
+			return c.JSON(http.StatusBadRequest, Error{
+				Message: ErrHTTPBadRequest.Error(),
+			})
+		}
+
+		u := &models.User{
+			Nickname: nickname,
+			Email:    request.Email,
+			Fullname: request.Fullname,
+			About:    request.About,
+		}
+
+		err := uh.ucase.EditUser(u)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusConflict, Error{
+				Message: ErrAlreadyExists.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, u)
 	}
 }

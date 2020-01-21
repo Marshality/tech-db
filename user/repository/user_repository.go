@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"github.com/Marshality/tech-db/models"
+	. "github.com/Marshality/tech-db/tools"
 	"github.com/Marshality/tech-db/user"
 	"log"
 )
@@ -17,10 +18,10 @@ func NewUserRepository(conn *sql.DB) user.Repository {
 	}
 }
 
-func (ur *UserRepository) GetUsersWhere(nickname, email string) ([]*models.User, error) {
+func (ur *UserRepository) SelectWhere(nickname, email string) ([]*models.User, error) {
 	var users []*models.User
 
-	rows, err := ur.db.Query("SELECT id, nickname, fullname, email, about " +
+	rows, err := ur.db.Query("SELECT id, nickname, fullname, email, about "+
 		"FROM users WHERE nickname = $1 OR email = $2", nickname, email)
 
 	if err != nil {
@@ -53,4 +54,41 @@ func (ur *UserRepository) Create(user *models.User) error {
 		user.Email,
 		user.About,
 	).Scan(&user.ID)
+}
+
+func (ur *UserRepository) SelectByNickname(nickname string) (*models.User, error) {
+	u := &models.User{}
+
+	if err := ur.db.QueryRow("SELECT id, nickname, fullname, email, about FROM users WHERE nickname = $1",
+		nickname,
+	).Scan(&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return u, nil
+}
+
+func (ur *UserRepository) Update(u *models.User) error {
+	res, err := ur.db.Exec("UPDATE users SET about = $1, fullname = $2, email = $3 WHERE nickname = $4",
+		u.About, u.Fullname, u.Email, u.Nickname)
+
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return ErrNotFound
+	}
+
+	return nil
 }
