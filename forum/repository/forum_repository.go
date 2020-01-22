@@ -40,13 +40,3 @@ func (fr *ForumRepository) Insert(forum *models.Forum) error {
 		forum.User,
 	).Scan(&forum.ID)
 }
-
-func (fr *ForumRepository) InsertThread(thread *models.Thread) error {
-	return fr.db.QueryRow(queries.InsertIntoThreads,
-		thread.Slug,
-		thread.Author,
-		thread.Message,
-		thread.Title,
-		thread.CreatedAt,
-	).Scan(&thread.ID)
-}

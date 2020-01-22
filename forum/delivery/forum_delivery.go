@@ -3,6 +3,7 @@ package delivery
 import (
 	"github.com/Marshality/tech-db/forum"
 	"github.com/Marshality/tech-db/models"
+	"github.com/Marshality/tech-db/thread"
 	. "github.com/Marshality/tech-db/tools"
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
@@ -10,12 +11,14 @@ import (
 )
 
 type ForumHandler struct {
-	ucase forum.Usecase
+	forumUcase  forum.Usecase
+	threadUcase thread.Usecase
 }
 
-func ConfigureForumHandler(e *echo.Echo, ucase forum.Usecase) {
+func ConfigureForumHandler(e *echo.Echo, fUc forum.Usecase, tUc thread.Usecase) {
 	handler := &ForumHandler{
-		ucase: ucase,
+		forumUcase:  fUc,
+		threadUcase: tUc,
 	}
 
 	e.POST("/api/forum/create", handler.CreateForum())
@@ -44,7 +47,7 @@ func (fh *ForumHandler) CreateForum() echo.HandlerFunc {
 			Title: request.Title,
 		}
 
-		err := fh.ucase.Create(f)
+		err := fh.forumUcase.Create(f)
 
 		if err != nil && err == ErrNotFound {
 			logrus.Info(err.Error())
@@ -73,7 +76,7 @@ func (fh *ForumHandler) GetForumDetails() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		slug := c.Param("slug")
 
-		f, err := fh.ucase.GetBySlug(slug)
+		f, err := fh.forumUcase.GetBySlug(slug)
 
 		if err != ErrNotFound && err != nil {
 			return c.JSON(http.StatusInternalServerError, Error{
@@ -92,7 +95,54 @@ func (fh *ForumHandler) GetForumDetails() echo.HandlerFunc {
 }
 
 func (fh *ForumHandler) CreateThread() echo.HandlerFunc {
+	type Request struct {
+		Author  string `json:"author"`
+		Created string `json:"created"`
+		Title   string `json:"title"`
+		Slug    string `json:"slug"`
+		Message string `json:"message"`
+	}
+
 	return func(c echo.Context) error {
-		return nil
+		forumSlug := c.Param("slug")
+
+		request := &Request{}
+		if err := c.Bind(request); err != nil {
+			return c.JSON(http.StatusBadRequest, Error{
+				Message: ErrHTTPBadRequest.Error(),
+			})
+		}
+
+		t := &models.Thread{
+			Forum:     forumSlug,
+			Slug:      request.Slug,
+			Author:    request.Author,
+			Title:     request.Title,
+			CreatedAt: request.Created,
+			Message:   request.Message,
+		}
+
+		err := fh.threadUcase.Create(t)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if err != nil && err == ErrAlreadyExists {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusConflict, t)
+		}
+
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusCreated, t)
 	}
 }

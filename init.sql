@@ -1,7 +1,8 @@
 create extension if not exists citext;
 
-drop table if exists forums;
-drop table if exists users;
+drop table if exists forums cascade;
+drop table if exists users cascade;
+drop table if exists threads cascade;
 
 create table users
 (
@@ -23,5 +24,17 @@ create table forums
     slug    citext    not null primary key,
     threads int       not null default 0,
     title   varchar   not null,
-    usr     citext    not null references users(nickname)
+    usr     citext    not null references users (nickname)
+);
+
+create table threads
+(
+    id         bigserial not null primary key,
+    slug       citext    not null,
+    author     citext    not null references users (nickname),
+    forum      citext    not null references forums (slug),
+    message    text,
+    title      varchar   not null,
+    votes      int         default 0,
+    created_at timestamptz default now()
 );
