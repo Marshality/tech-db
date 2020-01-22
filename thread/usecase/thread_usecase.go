@@ -77,3 +77,30 @@ func (tu *ThreadUsecase) Create(t *models.Thread) error {
 
 	return nil
 }
+
+func (tu *ThreadUsecase) GetThreadsByForum(slug string, since string, limit uint64, desc bool) ([]*models.Thread, error) {
+	f, err := tu.forumUcase.GetBySlug(slug)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var threads []*models.Thread
+
+	switch since {
+	case "":
+		threads, err = tu.threadRepo.SelectThreadsWhereForum(f.Slug, limit, desc)
+	default:
+		threads, err = tu.threadRepo.SelectThreadsWhereForumAndCreated(f.Slug, limit, since, desc)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if threads == nil {
+		threads = []*models.Thread{}
+	}
+
+	return threads, nil
+}

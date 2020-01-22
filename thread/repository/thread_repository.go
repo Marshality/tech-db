@@ -6,6 +6,7 @@ import (
 	"github.com/Marshality/tech-db/thread"
 	. "github.com/Marshality/tech-db/tools"
 	"github.com/Marshality/tech-db/tools/queries"
+	"log"
 )
 
 type ThreadRepository struct {
@@ -42,4 +43,60 @@ func (tr *ThreadRepository) Insert(thread *models.Thread) error {
 		thread.Title,
 		thread.CreatedAt,
 	).Scan(&thread.ID)
+}
+
+func (tr *ThreadRepository) SelectThreadsWhereForum(slug string, limit uint64, desc bool) ([]*models.Thread, error) {
+	var threads []*models.Thread
+
+	rows, err := tr.db.Query(queries.QM.SelectThreadsWhereForum(desc), slug, limit)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	for rows.Next() {
+		t := &models.Thread{}
+
+		if err := rows.Scan(&t.ID, &t.Slug, &t.Author, &t.Forum, &t.Message, &t.Title, &t.Votes, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+
+		threads = append(threads, t)
+	}
+
+	return threads, nil
+}
+
+func (tr *ThreadRepository) SelectThreadsWhereForumAndCreated(slug string, limit uint64, since string, desc bool) ([]*models.Thread, error) {
+	var threads []*models.Thread
+
+	rows, err := tr.db.Query(queries.QM.SelectThreadsWhereForumAndCreated(desc), slug, since, limit)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	for rows.Next() {
+		t := &models.Thread{}
+
+		if err := rows.Scan(&t.ID, &t.Slug, &t.Author, &t.Forum, &t.Message, &t.Title, &t.Votes, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+
+		threads = append(threads, t)
+	}
+
+	return threads, nil
 }

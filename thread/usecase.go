@@ -5,4 +5,5 @@ import "github.com/Marshality/tech-db/models"
 type Usecase interface {
 	GetBySlug(slug string) (*models.Thread, error)
 	Create(t *models.Thread) error
+	GetThreadsByForum(slug string, since string, limit uint64, desc bool) ([]*models.Thread, error)
 }
