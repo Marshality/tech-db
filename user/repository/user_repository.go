@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/Marshality/tech-db/models"
 	. "github.com/Marshality/tech-db/tools"
+	"github.com/Marshality/tech-db/tools/queries"
 	"github.com/Marshality/tech-db/user"
 	"log"
 )
@@ -21,8 +22,7 @@ func NewUserRepository(conn *sql.DB) user.Repository {
 func (ur *UserRepository) SelectWhere(nickname, email string) ([]*models.User, error) {
 	var users []*models.User
 
-	rows, err := ur.db.Query("SELECT id, nickname, fullname, email, about "+
-		"FROM users WHERE nickname = $1 OR email = $2", nickname, email)
+	rows, err := ur.db.Query(queries.SelectUsersWhereNicknameOrEmail, nickname, email)
 
 	if err != nil {
 		return nil, err
@@ -47,8 +47,8 @@ func (ur *UserRepository) SelectWhere(nickname, email string) ([]*models.User, e
 	return users, nil
 }
 
-func (ur *UserRepository) Create(user *models.User) error {
-	return ur.db.QueryRow("INSERT INTO users (nickname, fullname, email, about) VALUES ($1, $2, $3, $4) RETURNING id",
+func (ur *UserRepository) Insert(user *models.User) error {
+	return ur.db.QueryRow(queries.InsertIntoUsers,
 		user.Nickname,
 		user.Fullname,
 		user.Email,
@@ -59,9 +59,8 @@ func (ur *UserRepository) Create(user *models.User) error {
 func (ur *UserRepository) SelectByNickname(nickname string) (*models.User, error) {
 	u := &models.User{}
 
-	if err := ur.db.QueryRow("SELECT id, nickname, fullname, email, about FROM users WHERE nickname = $1",
-		nickname,
-	).Scan(&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
+	if err := ur.db.QueryRow(queries.SelectUserWhereNickname, nickname).Scan(
+		&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -75,9 +74,8 @@ func (ur *UserRepository) SelectByNickname(nickname string) (*models.User, error
 func (ur *UserRepository) SelectByEmail(email string) (*models.User, error) {
 	u := &models.User{}
 
-	if err := ur.db.QueryRow("SELECT id, nickname, fullname, email, about FROM users WHERE email = $1",
-		email,
-	).Scan(&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
+	if err := ur.db.QueryRow(queries.SelectUserWhereEmail, email).Scan(
+		&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -89,8 +87,7 @@ func (ur *UserRepository) SelectByEmail(email string) (*models.User, error) {
 }
 
 func (ur *UserRepository) Update(u *models.User) error {
-	res, err := ur.db.Exec("UPDATE users SET about = $1, fullname = $2, email = $3 WHERE nickname = $4",
-		u.About, u.Fullname, u.Email, u.Nickname)
+	res, err := ur.db.Exec(queries.UpdateUsers, u.About, u.Fullname, u.Email, u.Nickname)
 
 	if err != nil {
 		return err

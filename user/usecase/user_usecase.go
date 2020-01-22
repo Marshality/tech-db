@@ -16,7 +16,7 @@ func NewUserUsecase(repo user.Repository) user.Usecase {
 	}
 }
 
-func (ur *UserUsecase) Store(user *models.User) ([]*models.User, error) {
+func (ur *UserUsecase) Create(user *models.User) ([]*models.User, error) {
 	users, err := ur.repo.SelectWhere(user.Nickname, user.Email)
 
 	if err != nil {
@@ -27,7 +27,7 @@ func (ur *UserUsecase) Store(user *models.User) ([]*models.User, error) {
 		return users, ErrAlreadyExists
 	}
 
-	if err := ur.repo.Create(user); err != nil {
+	if err := ur.repo.Insert(user); err != nil {
 		return nil, err
 	}
 
@@ -36,10 +36,6 @@ func (ur *UserUsecase) Store(user *models.User) ([]*models.User, error) {
 
 func (ur *UserUsecase) GetByNickname(nickname string) (*models.User, error) {
 	u, err := ur.repo.SelectByNickname(nickname)
-
-	if err == ErrNotFound {
-		return nil, err
-	}
 
 	if err != nil {
 		return nil, err

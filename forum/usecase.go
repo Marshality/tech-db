@@ -3,5 +3,7 @@ package forum
 import "github.com/Marshality/tech-db/models"
 
 type Usecase interface {
-	Store(forum *models.Forum) error
+	GetBySlug(slug string) (*models.Forum, error)
+	Create(forum *models.Forum) error
+	//CreateThread(thread *models.Thread) error
 }

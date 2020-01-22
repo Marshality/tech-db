@@ -5,6 +5,7 @@ import (
 	"github.com/Marshality/tech-db/forum"
 	"github.com/Marshality/tech-db/models"
 	. "github.com/Marshality/tech-db/tools"
+	"github.com/Marshality/tech-db/tools/queries"
 )
 
 type ForumRepository struct {
@@ -20,9 +21,8 @@ func NewForumRepository(conn *sql.DB) forum.Repository {
 func (fr *ForumRepository) SelectBySlug(slug string) (*models.Forum, error) {
 	f := &models.Forum{}
 
-	if err := fr.db.QueryRow("SELECT id, slug, posts, threads, title, usr FROM forums WHERE slug = $1",
-		slug,
-	).Scan(&f.ID, &f.Slug, &f.Posts, &f.Threads, &f.Title, &f.User); err != nil {
+	if err := fr.db.QueryRow(queries.SelectForumWhereSlug, slug).Scan(
+		&f.ID, &f.Slug, &f.Posts, &f.Threads, &f.Title, &f.User); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -33,10 +33,20 @@ func (fr *ForumRepository) SelectBySlug(slug string) (*models.Forum, error) {
 	return f, nil
 }
 
-func (fr *ForumRepository) Create(forum *models.Forum) error {
-	return fr.db.QueryRow("INSERT INTO forums (slug, title, usr) VALUES ($1, $2, $3) RETURNING id",
+func (fr *ForumRepository) Insert(forum *models.Forum) error {
+	return fr.db.QueryRow(queries.InsertIntoForums,
 		forum.Slug,
 		forum.Title,
 		forum.User,
 	).Scan(&forum.ID)
+}
+
+func (fr *ForumRepository) InsertThread(thread *models.Thread) error {
+	return fr.db.QueryRow(queries.InsertIntoThreads,
+		thread.Slug,
+		thread.Author,
+		thread.Message,
+		thread.Title,
+		thread.CreatedAt,
+	).Scan(&thread.ID)
 }

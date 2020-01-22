@@ -47,7 +47,7 @@ func (uh *UserHandler) CreateUser() echo.HandlerFunc {
 			Email:    request.Email,
 		}
 
-		users, err := uh.ucase.Store(u)
+		users, err := uh.ucase.Create(u)
 
 		if err != ErrAlreadyExists && err != nil {
 			logrus.Info(err.Error())

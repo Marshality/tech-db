@@ -19,6 +19,8 @@ func ConfigureForumHandler(e *echo.Echo, ucase forum.Usecase) {
 	}
 
 	e.POST("/api/forum/create", handler.CreateForum())
+	e.GET("/api/forum/:slug/details", handler.GetForumDetails())
+	e.POST("/api/forum/:slug/create", handler.CreateThread())
 }
 
 func (fh *ForumHandler) CreateForum() echo.HandlerFunc {
@@ -42,7 +44,7 @@ func (fh *ForumHandler) CreateForum() echo.HandlerFunc {
 			Title: request.Title,
 		}
 
-		err := fh.ucase.Store(f)
+		err := fh.ucase.Create(f)
 
 		if err != nil && err == ErrNotFound {
 			logrus.Info(err.Error())
@@ -64,5 +66,33 @@ func (fh *ForumHandler) CreateForum() echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusCreated, f)
+	}
+}
+
+func (fh *ForumHandler) GetForumDetails() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		slug := c.Param("slug")
+
+		f, err := fh.ucase.GetBySlug(slug)
+
+		if err != ErrNotFound && err != nil {
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if f == nil {
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, f)
+	}
+}
+
+func (fh *ForumHandler) CreateThread() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return nil
 	}
 }
