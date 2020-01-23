@@ -7,6 +7,9 @@ import (
 	_forumRepo "github.com/Marshality/tech-db/forum/repository"
 	_forumUcase "github.com/Marshality/tech-db/forum/usecase"
 	"github.com/Marshality/tech-db/middleware"
+	_postRepo "github.com/Marshality/tech-db/post/repository"
+	_postUcase "github.com/Marshality/tech-db/post/usecase"
+	_threadDelivery "github.com/Marshality/tech-db/thread/delivery"
 	_threadRepo "github.com/Marshality/tech-db/thread/repository"
 	_threadUcase "github.com/Marshality/tech-db/thread/usecase"
 	"github.com/Marshality/tech-db/tools"
@@ -54,15 +57,18 @@ func main() {
 	userRepo := _userRepo.NewUserRepository(dbConn)
 	forumRepo := _forumRepo.NewForumRepository(dbConn)
 	threadRepo := _threadRepo.NewThreadRepository(dbConn)
+	postRepo := _postRepo.NewPostRepository(dbConn)
 
 	// Usecases
 	userUcase := _userUcase.NewUserUsecase(userRepo)
 	forumUcase := _forumUcase.NewForumUsecase(forumRepo, userUcase)
 	threadUcase := _threadUcase.NewThreadUsecase(threadRepo, userUcase, forumUcase)
+	postUcase := _postUcase.NewPostUsecase(postRepo, threadUcase)
 
 	// Handlers
 	_userDelivery.ConfigureUserHandler(e, userUcase)
 	_forumDelivery.ConfigureForumHandler(e, forumUcase, threadUcase)
+	_threadDelivery.ConfigureThreadHandler(e, threadUcase, postUcase)
 
 	log.Fatal(e.Start(config.Server.Host + ":" + config.Server.Port))
 }

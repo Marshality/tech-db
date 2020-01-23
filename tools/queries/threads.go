@@ -10,6 +10,8 @@ const (
 
 	SelectThreadWhereSlug = "SELECT id, slug, author, forum, message, title, votes, created_at FROM threads WHERE slug = $1"
 
+	SelectThreadWhereID = "SELECT id, slug, author, forum, message, title, votes, created_at FROM threads WHERE id = $1"
+
 	SelectThreadsWhereForum = "SELECT id, slug, author, forum, message, title, votes, created_at FROM threads " +
 		"WHERE forum = $1 ORDER BY created_at %s LIMIT $2"
 

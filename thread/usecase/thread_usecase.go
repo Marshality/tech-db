@@ -33,6 +33,16 @@ func (tu *ThreadUsecase) GetBySlug(slug string) (*models.Thread, error) {
 	return u, nil
 }
 
+func (tu *ThreadUsecase) GetByID(id uint64) (*models.Thread, error) {
+	u, err := tu.threadRepo.SelectByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
 func (tu *ThreadUsecase) Create(t *models.Thread) error {
 	frm, err := tu.forumUcase.GetBySlug(t.Forum)
 

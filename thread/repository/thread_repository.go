@@ -34,6 +34,21 @@ func (tr *ThreadRepository) SelectBySlug(slug string) (*models.Thread, error) {
 	return t, nil
 }
 
+func (tr *ThreadRepository) SelectByID(id uint64) (*models.Thread, error) {
+	t := &models.Thread{}
+
+	if err := tr.db.QueryRow(queries.SelectThreadWhereID, id).Scan(
+		&t.ID, &t.Slug, &t.Author, &t.Forum, &t.Message, &t.Title, &t.Votes, &t.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return t, nil
+}
+
 func (tr *ThreadRepository) Insert(thread *models.Thread) error {
 	return tr.db.QueryRow(queries.InsertIntoThreads,
 		thread.Slug,
