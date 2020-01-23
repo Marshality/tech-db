@@ -28,7 +28,7 @@ create table forums
 create table threads
 (
     id         bigserial not null primary key,
-    slug       citext not null,
+    slug       citext    not null,
     author     citext    not null references users (nickname),
     forum      citext    not null references forums (slug),
     message    text,
@@ -59,14 +59,15 @@ execute procedure threadsCounter();
 
 create table posts
 (
-    id         bigserial not null primary key,
-    forum      citext    not null references forums (slug),
-    thread     bigint    not null references threads (id),
-    author     citext    not null references users (nickname),
-    message    text      not null,
-    parent     int       not null default 0,
-    is_edited  bool      not null default false,
-    created_at timestamptz        default now()
+    id         bigserial   not null primary key,
+    forum      citext      not null references forums (slug),
+    thread     bigint      not null references threads (id),
+    author     citext      not null references users (nickname),
+    message    text        not null,
+    parent     int         not null default 0,
+    is_edited  bool        not null default false,
+    created_at timestamptz          default now()
+--     path       varchar(50) not null
 );
 
 drop function if exists postsCounter;
@@ -89,12 +90,33 @@ create trigger postsIncrementer
     for each row
 execute procedure postsCounter();
 
+-- tree sort
+drop function if exists setPath;
+-- create or replace function setPath()
+--     returns trigger as
+-- $$
+-- begin
+--     update posts
+--     set path = concat(coalesce((select path from posts where id = new.parent), '0'), '.', New.id);
+--
+--     return null;
+-- end;
+-- $$ language plpgsql;
+--
+drop trigger if exists pathSetter on posts;
+-- create trigger pathSetter
+--     before insert
+--     on posts
+--     for each row
+-- execute procedure setPath();
+-- tree sort
+
 create table vote
 (
-    id bigserial primary key,
-    thread int not null references threads(id),
-    nickname citext not null references users(nickname),
-    voice int not null
+    id       bigserial primary key,
+    thread   int    not null references threads (id),
+    nickname citext not null references users (nickname),
+    voice    int    not null
 );
 
 create unique index on vote (thread, nickname);

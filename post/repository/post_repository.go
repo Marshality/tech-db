@@ -6,6 +6,7 @@ import (
 	"github.com/Marshality/tech-db/post"
 	. "github.com/Marshality/tech-db/tools"
 	"github.com/Marshality/tech-db/tools/queries"
+	"log"
 )
 
 type PostRepository struct {
@@ -35,4 +36,47 @@ func (pr *PostRepository) SelectByThreadAndID(id, thread uint64) (*models.Post, 
 	}
 
 	return p, nil
+}
+
+func (pr *PostRepository) GetPostsByThreadFlat(thread uint64, since *uint64, limit uint64, desc bool) ([]*models.Post, error) {
+	var posts []*models.Post
+
+	var rows *sql.Rows
+	var err error
+
+	if since != nil {
+		rows, err = pr.db.Query(queries.QM.SelectPostsByThreadSince(desc, FLAT_SORT), thread, since, limit)
+	} else {
+		rows, err = pr.db.Query(queries.QM.SelectPostsByThread(desc, FLAT_SORT), thread, limit)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	for rows.Next() {
+		p := &models.Post{}
+
+		if err := rows.Scan(&p.ID, &p.Author, &p.Forum, &p.Thread, &p.Message, &p.Parent, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+
+		posts = append(posts, p)
+	}
+
+	return posts, nil
+}
+
+func (pr *PostRepository) GetPostsByThreadTree(thread uint64, since *uint64, limit uint64, desc bool) ([]*models.Post, error) {
+	return nil, nil
+}
+
+func (pr *PostRepository) GetPostsByThreadParentTree(thread uint64, since *uint64, limit uint64, desc bool) ([]*models.Post, error) {
+	return nil, nil
 }

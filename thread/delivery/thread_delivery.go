@@ -23,6 +23,8 @@ func ConfigureThreadHandler(e *echo.Echo, tUc thread.Usecase, pUc post.Usecase) 
 
 	e.POST("/api/thread/:slug_or_id/create", handler.CreatePosts())
 	e.POST("/api/thread/:slug_or_id/vote", handler.Vote())
+	e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails())
+	e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadPosts())
 }
 
 func (th *ThreadHandler) CreatePosts() echo.HandlerFunc {
@@ -98,5 +100,67 @@ func (th *ThreadHandler) Vote() echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusOK, t)
+	}
+}
+
+func (th *ThreadHandler) GetThreadDetails() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		slugOrID := c.Param("slug_or_id")
+
+		t, err := th.threadUcase.GetThread(slugOrID)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, t)
+	}
+}
+
+func (th *ThreadHandler) GetThreadPosts() echo.HandlerFunc {
+	type Request struct {
+		Limit uint64 `json:"limit"`
+		Since uint64 `json:"since"`
+		Sort  string `json:"sort"`
+		Desc  bool   `json:"desc"`
+	}
+
+	return func(c echo.Context) error {
+		slugOrID := c.Param("slug_or_id")
+
+		request := &Request{}
+		if err := c.Bind(request); err != nil {
+			return c.JSON(http.StatusBadRequest, Error{
+				Message: ErrHTTPBadRequest.Error(),
+			})
+		}
+
+		posts, err := th.postUcase.GetPostsByThread(slugOrID, &request.Since, request.Limit, request.Sort, request.Desc)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, posts)
 	}
 }

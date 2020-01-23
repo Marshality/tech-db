@@ -160,3 +160,21 @@ func (tu *ThreadUsecase) Vote(v *models.Vote, slugOrID string) (*models.Thread, 
 
 	return t, nil
 }
+
+func (tu *ThreadUsecase) GetThread(slugOrID string) (*models.Thread, error) {
+	id, err := strconv.Atoi(slugOrID)
+
+	t := &models.Thread{}
+
+	if err != nil {
+		t, err = tu.GetBySlug(slugOrID)
+	} else {
+		t, err = tu.GetByID(uint64(id))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
