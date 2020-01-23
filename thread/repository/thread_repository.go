@@ -19,6 +19,15 @@ func NewThreadRepository(conn *sql.DB) thread.Repository {
 	}
 }
 
+func (tr *ThreadRepository) UpdateVote(v *models.Vote) error {
+	_, err := tr.db.Exec(queries.UpdateVote, v.Voice, v.Nickname, v.Thread)
+	return err
+}
+
+func (tr *ThreadRepository) InsertVote(v *models.Vote) error {
+	return tr.db.QueryRow(queries.InsertVote, v.Thread, v.Nickname, v.Voice).Scan(&v.ID)
+}
+
 func (tr *ThreadRepository) SelectBySlug(slug string) (*models.Thread, error) {
 	t := &models.Thread{}
 

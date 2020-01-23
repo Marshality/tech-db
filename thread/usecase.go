@@ -7,4 +7,5 @@ type Usecase interface {
 	GetByID(id uint64) (*models.Thread, error)
 	Create(t *models.Thread) error
 	GetThreadsByForum(slug string, since string, limit uint64, desc bool) ([]*models.Thread, error)
+	Vote(v *models.Vote, slugOrID string) (*models.Thread, error)
 }

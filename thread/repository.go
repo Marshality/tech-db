@@ -8,4 +8,6 @@ type Repository interface {
 	Insert(t *models.Thread) error
 	SelectThreadsWhereForum(slug string, limit uint64, desc bool) ([]*models.Thread, error)
 	SelectThreadsWhereForumAndCreated(slug string, limit uint64, since string, desc bool) ([]*models.Thread, error)
+	InsertVote(v *models.Vote) error
+	UpdateVote(v *models.Vote) error
 }

@@ -6,6 +6,8 @@ import (
 	"github.com/Marshality/tech-db/thread"
 	. "github.com/Marshality/tech-db/tools"
 	"github.com/Marshality/tech-db/user"
+	"github.com/lib/pq"
+	"strconv"
 	"time"
 )
 
@@ -113,4 +115,48 @@ func (tu *ThreadUsecase) GetThreadsByForum(slug string, since string, limit uint
 	}
 
 	return threads, nil
+}
+
+func (tu *ThreadUsecase) Vote(v *models.Vote, slugOrID string) (*models.Thread, error) {
+	if _, err := tu.userUcase.GetByNickname(v.Nickname); err != nil {
+		return nil, err
+	}
+
+	id, err := strconv.Atoi(slugOrID)
+
+	t := &models.Thread{}
+
+	if err != nil {
+		t, err = tu.GetBySlug(slugOrID)
+	} else {
+		t, err = tu.GetByID(uint64(id))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	v.Thread = t.ID
+
+	if err = tu.threadRepo.InsertVote(v); err != nil {
+		psqlError, ok := err.(*pq.Error)
+
+		if !ok {
+			return nil, err
+		}
+
+		if psqlError.Code != "23505" {
+			return nil, err
+		}
+
+		if err := tu.threadRepo.UpdateVote(v); err != nil {
+			return nil, err
+		}
+	}
+
+	if t, err = tu.GetByID(t.ID); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
