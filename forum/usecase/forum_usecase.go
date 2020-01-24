@@ -57,3 +57,21 @@ func (fu *ForumUsecase) Create(f *models.Forum) error {
 
 	return nil
 }
+
+func (fu *ForumUsecase) GetForumUsers(slug string, limit uint64, since string, desc bool) ([]*models.User, error) {
+	if _, err := fu.GetBySlug(slug); err != nil {
+		return nil, err
+	}
+
+	users, err := fu.forumRepo.SelectForumUsers(slug, limit, since, desc)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if users == nil {
+		users = []*models.User{}
+	}
+
+	return users, err
+}

@@ -56,6 +56,13 @@ func (th *ThreadHandler) CreatePosts() echo.HandlerFunc {
 			})
 		}
 
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
 		return c.JSON(http.StatusCreated, posts)
 	}
 }

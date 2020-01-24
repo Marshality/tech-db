@@ -18,9 +18,9 @@ create table users
 create table forums
 (
     id      bigserial not null,
-    posts   int       not null default 0,
+    posts   integer       not null default 0,
     slug    citext    not null primary key,
-    threads int       not null default 0,
+    threads integer     not null default 0,
     title   varchar   not null,
     usr     citext    not null references users (nickname)
 );
@@ -33,15 +33,29 @@ create table threads
     forum      citext    not null references forums (slug),
     message    text,
     title      varchar   not null,
-    votes      int         default 0,
+    votes      integer     default 0,
     created_at timestamptz default now()
 );
+
+drop table if exists user_forum cascade;
+create table user_forum
+(
+    user_id    integer,
+    forum_slug citext,
+    primary key (forum_slug, user_id)
+);
+
+create index index_on_forum_user on user_forum (forum_slug);
 
 drop function if exists threadsCounter;
 create or replace function threadsCounter()
     returns trigger as
 $$
 begin
+    insert into user_forum (forum_slug, user_id)
+    values (new.forum, (select id from users where nickname = new.author))
+    on conflict do nothing;
+
     update forums
     set threads = threads + 1
     where slug = new.forum;
@@ -63,8 +77,8 @@ create table posts
     forum      citext    not null references forums (slug),
     thread     bigint    not null references threads (id),
     author     citext    not null references users (nickname),
-    message    text      not null,
-    parent     int not null default 0,
+    message    text,
+    parent     integer       not null default 0,
     is_edited  bool      not null default false,
     created_at timestamptz        default now(),
     path       bigint array
@@ -75,6 +89,10 @@ create or replace function postsCounter()
     returns trigger as
 $$
 begin
+    insert into user_forum (forum_slug, user_id)
+    values (new.forum, (select id from users where nickname = new.author))
+    on conflict do nothing;
+
     update forums
     set posts = posts + 1
     where slug = new.forum;
@@ -121,9 +139,9 @@ EXECUTE PROCEDURE setPath();
 create table vote
 (
     id       bigserial primary key,
-    thread   int    not null references threads (id),
+    thread   integer    not null references threads (id),
     nickname citext not null references users (nickname),
-    voice    int    not null
+    voice    integer    not null
 );
 
 create unique index on vote (thread, nickname);
@@ -168,4 +186,5 @@ create trigger voteUpdater
     for each row
 execute procedure voteUpdate();
 
-select id, path from posts;
+select id, path
+from posts;

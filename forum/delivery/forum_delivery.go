@@ -25,6 +25,7 @@ func ConfigureForumHandler(e *echo.Echo, fUc forum.Usecase, tUc thread.Usecase) 
 	e.GET("/api/forum/:slug/details", handler.GetForumDetails())
 	e.POST("/api/forum/:slug/create", handler.CreateThread())
 	e.GET("/api/forum/:slug/threads", handler.GetForumThreads())
+	e.GET("/api/forum/:slug/users", handler.GetForumUsers())
 }
 
 func (fh *ForumHandler) CreateForum() echo.HandlerFunc {
@@ -182,5 +183,42 @@ func (fh *ForumHandler) GetForumThreads() echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusOK, threads)
+	}
+}
+
+func (fh *ForumHandler) GetForumUsers() echo.HandlerFunc {
+	type Request struct {
+		Limit uint64 `query:"limit"`
+		Since string `query:"since"`
+		Desc  bool   `query:"desc"`
+	}
+
+	return func(c echo.Context) error {
+		forumSlug := c.Param("slug")
+
+		request := &Request{}
+		if err := c.Bind(request); err != nil {
+			return c.JSON(http.StatusBadRequest, Error{
+				Message: ErrHTTPBadRequest.Error(),
+			})
+		}
+
+		users, err := fh.forumUcase.GetForumUsers(forumSlug, request.Limit, request.Since, request.Desc)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, users)
 	}
 }

@@ -7,8 +7,12 @@ import (
 	_forumRepo "github.com/Marshality/tech-db/forum/repository"
 	_forumUcase "github.com/Marshality/tech-db/forum/usecase"
 	"github.com/Marshality/tech-db/middleware"
+	_postDelivery "github.com/Marshality/tech-db/post/delivery"
 	_postRepo "github.com/Marshality/tech-db/post/repository"
 	_postUcase "github.com/Marshality/tech-db/post/usecase"
+	_serviceDelivery "github.com/Marshality/tech-db/service/delivery"
+	_serviceRepo "github.com/Marshality/tech-db/service/repository"
+	_serviceUcase "github.com/Marshality/tech-db/service/usecase"
 	_threadDelivery "github.com/Marshality/tech-db/thread/delivery"
 	_threadRepo "github.com/Marshality/tech-db/thread/repository"
 	_threadUcase "github.com/Marshality/tech-db/thread/usecase"
@@ -58,17 +62,21 @@ func main() {
 	forumRepo := _forumRepo.NewForumRepository(dbConn)
 	threadRepo := _threadRepo.NewThreadRepository(dbConn)
 	postRepo := _postRepo.NewPostRepository(dbConn)
+	serviceRepo := _serviceRepo.NewServiceRepository(dbConn)
 
 	// Usecases
 	userUcase := _userUcase.NewUserUsecase(userRepo)
 	forumUcase := _forumUcase.NewForumUsecase(forumRepo, userUcase)
 	threadUcase := _threadUcase.NewThreadUsecase(threadRepo, userUcase, forumUcase)
 	postUcase := _postUcase.NewPostUsecase(postRepo, threadUcase)
+	serviceUcase := _serviceUcase.NewServiceUsecase(serviceRepo)
 
 	// Handlers
 	_userDelivery.ConfigureUserHandler(e, userUcase)
 	_forumDelivery.ConfigureForumHandler(e, forumUcase, threadUcase)
 	_threadDelivery.ConfigureThreadHandler(e, threadUcase, postUcase)
+	_postDelivery.ConfigurePostHandler(e, postUcase)
+	_serviceDelivery.ConfigureServiceHandler(e, serviceUcase)
 
 	log.Fatal(e.Start(config.Server.Host + ":" + config.Server.Port))
 }

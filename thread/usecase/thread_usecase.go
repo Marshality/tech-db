@@ -185,6 +185,14 @@ func (tu *ThreadUsecase) EditThread(slugOrID string, t *models.Thread) error {
 
 	t.ID = founded.ID
 
+	if t.Message == "" {
+		t.Message = founded.Message
+	}
+
+	if t.Title == "" {
+		t.Title = founded.Title
+	}
+
 	err = tu.threadRepo.Update(t)
 
 	if err != nil {

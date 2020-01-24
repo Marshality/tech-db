@@ -5,14 +5,15 @@ import (
 	"github.com/Marshality/tech-db/models"
 	"github.com/Marshality/tech-db/post"
 	"github.com/Marshality/tech-db/thread"
+	"github.com/Marshality/tech-db/user"
 	"github.com/sirupsen/logrus"
-	"strconv"
 	"time"
 )
 
 type PostUsecase struct {
 	postRepo    post.Repository
 	threadUcase thread.Usecase
+	userUcase user.Usecase
 }
 
 func NewPostUsecase(pr post.Repository, tUc thread.Usecase) post.Usecase {
@@ -23,15 +24,7 @@ func NewPostUsecase(pr post.Repository, tUc thread.Usecase) post.Usecase {
 }
 
 func (pu *PostUsecase) CreatePosts(posts *models.Posts, slugOrID string) error {
-	id, err := strconv.Atoi(slugOrID)
-
-	t := &models.Thread{}
-
-	if err != nil {
-		t, err = pu.threadUcase.GetBySlug(slugOrID)
-	} else {
-		t, err = pu.threadUcase.GetByID(uint64(id))
-	}
+	t, err := pu.threadUcase.GetThread(slugOrID)
 
 	if err != nil {
 		return err
@@ -62,15 +55,7 @@ func (pu *PostUsecase) CreatePosts(posts *models.Posts, slugOrID string) error {
 }
 
 func (pu *PostUsecase) GetPostsByThread(slugOrID string, since uint64, limit uint64, sort string, desc bool) ([]*models.Post, error) {
-	id, err := strconv.Atoi(slugOrID)
-
-	t := &models.Thread{}
-
-	if err != nil {
-		t, err = pu.threadUcase.GetBySlug(slugOrID)
-	} else {
-		t, err = pu.threadUcase.GetByID(uint64(id))
-	}
+	t, err := pu.threadUcase.GetThread(slugOrID)
 
 	if err != nil {
 		return nil, err
@@ -85,4 +70,36 @@ func (pu *PostUsecase) GetPostsByThread(slugOrID string, since uint64, limit uin
 	}
 
 	return posts, err
+}
+
+func (pu *PostUsecase) GetPost(id uint64) (*models.Post, error) {
+	return pu.postRepo.SelectPost(id)
+}
+
+func (pu *PostUsecase) GetPostByID(id uint64, related ...string) (*models.Post, *models.Forum, *models.Thread, *models.User, error) {
+	if _, err := pu.GetPost(id); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	p, t, f, u, err := pu.postRepo.SelectPostWhereID(id, related...)
+
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return p, f, t, u, err
+}
+
+func (pu *PostUsecase) EditPost(p *models.Post) error {
+	founded, err := pu.postRepo.SelectPost(p.ID)
+
+	if err != nil {
+		return err
+	}
+
+	if p.Message == "" {
+		p.Message = founded.Message
+	}
+
+	return pu.postRepo.UpdatePost(p)
 }
