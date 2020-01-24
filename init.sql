@@ -86,7 +86,7 @@ $$ language plpgsql;
 drop trigger if exists postsIncrementer on threads;
 create trigger postsIncrementer
     after insert
-    on threads
+    on posts
     for each row
 execute procedure postsCounter();
 

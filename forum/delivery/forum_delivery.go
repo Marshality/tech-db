@@ -113,7 +113,6 @@ func (fh *ForumHandler) CreateThread() echo.HandlerFunc {
 				Message: ErrHTTPBadRequest.Error(),
 			})
 		}
-		logrus.Info("AUTHOR: ", request.Author, " / SLUG: ", request.Slug)
 
 		t := &models.Thread{
 			Forum:     forumSlug,

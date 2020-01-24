@@ -124,3 +124,16 @@ func (tr *ThreadRepository) SelectThreadsWhereForumAndCreated(slug string, limit
 
 	return threads, nil
 }
+
+func (tr *ThreadRepository) Update(t *models.Thread) error {
+	if err := tr.db.QueryRow(queries.UpdateThreadsWhere, t.Message, t.Title, t.ID).Scan(
+		&t.Author, &t.Forum, &t.Slug, &t.Votes, &t.CreatedAt); err != nil {
+			if err == sql.ErrNoRows {
+				return ErrNotFound
+			}
+
+			return err
+	}
+
+	return nil
+}

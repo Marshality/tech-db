@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"errors"
 	"github.com/Marshality/tech-db/forum"
 	"github.com/Marshality/tech-db/models"
 	"github.com/Marshality/tech-db/thread"
@@ -122,15 +123,7 @@ func (tu *ThreadUsecase) Vote(v *models.Vote, slugOrID string) (*models.Thread, 
 		return nil, err
 	}
 
-	id, err := strconv.Atoi(slugOrID)
-
-	t := &models.Thread{}
-
-	if err != nil {
-		t, err = tu.GetBySlug(slugOrID)
-	} else {
-		t, err = tu.GetByID(uint64(id))
-	}
+	t, err := tu.GetThread(slugOrID)
 
 	if err != nil {
 		return nil, err
@@ -177,4 +170,30 @@ func (tu *ThreadUsecase) GetThread(slugOrID string) (*models.Thread, error) {
 	}
 
 	return t, nil
+}
+
+func (tu *ThreadUsecase) EditThread(slugOrID string, t *models.Thread) error {
+	founded, err := tu.GetThread(slugOrID)
+
+	if err != nil {
+		if err == ErrNotFound {
+			return errors.New("user not found")
+		}
+
+		return err
+	}
+
+	t.ID = founded.ID
+
+	err = tu.threadRepo.Update(t)
+
+	if err != nil {
+		if err == ErrNotFound {
+			return errors.New("thread not found")
+		}
+
+		return err
+	}
+
+	return nil
 }

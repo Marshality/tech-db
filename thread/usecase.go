@@ -9,4 +9,5 @@ type Usecase interface {
 	GetThreadsByForum(slug string, since string, limit uint64, desc bool) ([]*models.Thread, error)
 	Vote(v *models.Vote, slugOrID string) (*models.Thread, error)
 	GetThread(slugOrID string) (*models.Thread, error)
+	EditThread(slugOrID string, t *models.Thread) error
 }

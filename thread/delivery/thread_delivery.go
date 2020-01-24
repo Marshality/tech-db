@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 )
 
 type ThreadHandler struct {
@@ -25,6 +26,7 @@ func ConfigureThreadHandler(e *echo.Echo, tUc thread.Usecase, pUc post.Usecase) 
 	e.POST("/api/thread/:slug_or_id/vote", handler.Vote())
 	e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails())
 	e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadPosts())
+	e.POST("/api/thread/:slug_od_id/details", handler.EditThread())
 }
 
 func (th *ThreadHandler) CreatePosts() echo.HandlerFunc {
@@ -145,8 +147,6 @@ func (th *ThreadHandler) GetThreadPosts() echo.HandlerFunc {
 			})
 		}
 
-		logrus.Info("LIMIT: ", request.Limit, " / SORT: ", request.Sort)
-
 		posts, err := th.postUcase.GetPostsByThread(slugOrID, request.Since, request.Limit, request.Sort, request.Desc)
 
 		if err != nil && err == ErrNotFound {
@@ -164,5 +164,46 @@ func (th *ThreadHandler) GetThreadPosts() echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusOK, posts)
+	}
+}
+
+func (th *ThreadHandler) EditThread() echo.HandlerFunc {
+	type Request struct {
+		Message string `json:"message"`
+		Title   string `json:"title"`
+	}
+
+	return func(c echo.Context) error {
+		slugOrID := c.Param("slug_or_id")
+
+		request := &Request{}
+		if err := c.Bind(request); err != nil {
+			return c.JSON(http.StatusBadRequest, Error{
+				Message: ErrHTTPBadRequest.Error(),
+			})
+		}
+
+		t := &models.Thread{
+			Message: request.Message,
+			Title: request.Title,
+		}
+
+		err := th.threadUcase.EditThread(slugOrID, t)
+
+		if err != nil && strings.Contains(err.Error(), "not found") {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusNotFound, Error{
+				Message: err.Error(),
+			})
+		}
+
+		if err != nil {
+			logrus.Info(err.Error())
+			return c.JSON(http.StatusInternalServerError, Error{
+				Message: err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, t)
 	}
 }

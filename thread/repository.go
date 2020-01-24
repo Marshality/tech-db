@@ -10,4 +10,5 @@ type Repository interface {
 	SelectThreadsWhereForumAndCreated(slug string, limit uint64, since string, desc bool) ([]*models.Thread, error)
 	InsertVote(v *models.Vote) error
 	UpdateVote(v *models.Vote) error
+	Update(t *models.Thread) error
 }
