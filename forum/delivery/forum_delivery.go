@@ -100,7 +100,7 @@ func (fh *ForumHandler) CreateThread() echo.HandlerFunc {
 		Author  string `json:"author"`
 		Created string `json:"created"`
 		Title   string `json:"title"`
-		Slug    string `json:"slug"`
+		Slug    string `json:"slug" param:"slug"`
 		Message string `json:"message"`
 	}
 
@@ -113,6 +113,7 @@ func (fh *ForumHandler) CreateThread() echo.HandlerFunc {
 				Message: ErrHTTPBadRequest.Error(),
 			})
 		}
+		logrus.Info("AUTHOR: ", request.Author, " / SLUG: ", request.Slug)
 
 		t := &models.Thread{
 			Forum:     forumSlug,

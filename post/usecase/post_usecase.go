@@ -5,7 +5,7 @@ import (
 	"github.com/Marshality/tech-db/models"
 	"github.com/Marshality/tech-db/post"
 	"github.com/Marshality/tech-db/thread"
-	. "github.com/Marshality/tech-db/tools"
+	"github.com/sirupsen/logrus"
 	"strconv"
 	"time"
 )
@@ -44,6 +44,7 @@ func (pu *PostUsecase) CreatePosts(posts *models.Posts, slugOrID string) error {
 	for _, p := range *posts {
 		if p.Parent != 0 {
 			if _, err := pu.postRepo.SelectByThreadAndID(p.Parent, threadID); err != nil {
+				logrus.Info(err)
 				return errors.New("conflict")
 			}
 		}
@@ -60,7 +61,7 @@ func (pu *PostUsecase) CreatePosts(posts *models.Posts, slugOrID string) error {
 	return nil
 }
 
-func (pu *PostUsecase) GetPostsByThread(slugOrID string, since *uint64, limit uint64, sort string, desc bool) ([]*models.Post, error) {
+func (pu *PostUsecase) GetPostsByThread(slugOrID string, since uint64, limit uint64, sort string, desc bool) ([]*models.Post, error) {
 	id, err := strconv.Atoi(slugOrID)
 
 	t := &models.Thread{}
@@ -77,14 +78,11 @@ func (pu *PostUsecase) GetPostsByThread(slugOrID string, since *uint64, limit ui
 
 	threadID := t.ID
 
-	switch sort {
-	case FLAT_SORT, "":
-		return pu.postRepo.GetPostsByThreadFlat(threadID, since, limit, desc)
-	case TREE_SORT:
-		return pu.postRepo.GetPostsByThreadTree(threadID, since, limit, desc)
-	case PARENT_TREE_SORT:
-		return pu.postRepo.GetPostsByThreadParentTree(threadID, since, limit, desc)
+	posts, err := pu.postRepo.GetPostsByThread(threadID, since, limit, desc, sort)
+
+	if posts == nil {
+		posts = []*models.Post{}
 	}
 
-	return nil, ErrNotFound
+	return posts, err
 }

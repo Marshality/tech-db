@@ -38,16 +38,16 @@ func (pr *PostRepository) SelectByThreadAndID(id, thread uint64) (*models.Post, 
 	return p, nil
 }
 
-func (pr *PostRepository) GetPostsByThreadFlat(thread uint64, since *uint64, limit uint64, desc bool) ([]*models.Post, error) {
+func (pr *PostRepository) GetPostsByThread(thread uint64, since uint64, limit uint64, desc bool, sort string) ([]*models.Post, error) {
 	var posts []*models.Post
 
 	var rows *sql.Rows
 	var err error
 
-	if since != nil {
-		rows, err = pr.db.Query(queries.QM.SelectPostsByThreadSince(desc, FLAT_SORT), thread, since, limit)
+	if since != 0 {
+		rows, err = pr.db.Query(queries.QM.SelectPostsByThreadSince(desc, sort), thread, since, limit)
 	} else {
-		rows, err = pr.db.Query(queries.QM.SelectPostsByThread(desc, FLAT_SORT), thread, limit)
+		rows, err = pr.db.Query(queries.QM.SelectPostsByThread(desc, sort), thread, limit)
 	}
 
 	if err != nil {
@@ -63,7 +63,7 @@ func (pr *PostRepository) GetPostsByThreadFlat(thread uint64, since *uint64, lim
 	for rows.Next() {
 		p := &models.Post{}
 
-		if err := rows.Scan(&p.ID, &p.Author, &p.Forum, &p.Thread, &p.Message, &p.Parent, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Author, &p.Forum, &p.Thread, &p.Message, &p.Parent, &p.IsEdited, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 
@@ -71,12 +71,4 @@ func (pr *PostRepository) GetPostsByThreadFlat(thread uint64, since *uint64, lim
 	}
 
 	return posts, nil
-}
-
-func (pr *PostRepository) GetPostsByThreadTree(thread uint64, since *uint64, limit uint64, desc bool) ([]*models.Post, error) {
-	return nil, nil
-}
-
-func (pr *PostRepository) GetPostsByThreadParentTree(thread uint64, since *uint64, limit uint64, desc bool) ([]*models.Post, error) {
-	return nil, nil
 }

@@ -129,10 +129,10 @@ func (th *ThreadHandler) GetThreadDetails() echo.HandlerFunc {
 
 func (th *ThreadHandler) GetThreadPosts() echo.HandlerFunc {
 	type Request struct {
-		Limit uint64 `json:"limit"`
-		Since uint64 `json:"since"`
-		Sort  string `json:"sort"`
-		Desc  bool   `json:"desc"`
+		Limit uint64 `query:"limit"`
+		Since uint64 `query:"since"`
+		Sort  string `query:"sort"`
+		Desc  bool   `query:"desc"`
 	}
 
 	return func(c echo.Context) error {
@@ -145,7 +145,9 @@ func (th *ThreadHandler) GetThreadPosts() echo.HandlerFunc {
 			})
 		}
 
-		posts, err := th.postUcase.GetPostsByThread(slugOrID, &request.Since, request.Limit, request.Sort, request.Desc)
+		logrus.Info("LIMIT: ", request.Limit, " / SORT: ", request.Sort)
+
+		posts, err := th.postUcase.GetPostsByThread(slugOrID, request.Since, request.Limit, request.Sort, request.Desc)
 
 		if err != nil && err == ErrNotFound {
 			logrus.Info(err.Error())

@@ -59,15 +59,15 @@ execute procedure threadsCounter();
 
 create table posts
 (
-    id         bigserial   not null primary key,
-    forum      citext      not null references forums (slug),
-    thread     bigint      not null references threads (id),
-    author     citext      not null references users (nickname),
-    message    text        not null,
-    parent     int         not null default 0,
-    is_edited  bool        not null default false,
-    created_at timestamptz          default now()
---     path       varchar(50) not null
+    id         bigserial not null primary key,
+    forum      citext    not null references forums (slug),
+    thread     bigint    not null references threads (id),
+    author     citext    not null references users (nickname),
+    message    text      not null,
+    parent     int not null default 0,
+    is_edited  bool      not null default false,
+    created_at timestamptz        default now(),
+    path       bigint array
 );
 
 drop function if exists postsCounter;
@@ -90,26 +90,33 @@ create trigger postsIncrementer
     for each row
 execute procedure postsCounter();
 
--- tree sort
+-- post path
 drop function if exists setPath;
--- create or replace function setPath()
---     returns trigger as
--- $$
--- begin
---     update posts
---     set path = concat(coalesce((select path from posts where id = new.parent), '0'), '.', New.id);
---
---     return null;
--- end;
--- $$ language plpgsql;
---
+create or replace function setPath()
+    returns trigger as
+$$
+begin
+    if new.parent = 0 THEN
+        UPDATE posts
+        SET path = ARRAY [new.id]
+        WHERE id = new.id;
+    ELSE
+        UPDATE posts
+        SET path = array_append((SELECT path FROM posts WHERE id = new.parent), new.id)
+        WHERE id = new.id;
+    END IF;
+    RETURN new;
+END;
+$$
+    LANGUAGE plpgsql;
+
 drop trigger if exists pathSetter on posts;
--- create trigger pathSetter
---     before insert
---     on posts
---     for each row
--- execute procedure setPath();
--- tree sort
+create trigger pathSetter
+    after insert
+    ON posts
+    FOR EACH ROW
+EXECUTE PROCEDURE setPath();
+-- post path
 
 create table vote
 (
@@ -160,3 +167,5 @@ create trigger voteUpdater
     on vote
     for each row
 execute procedure voteUpdate();
+
+select id, path from posts;
