@@ -70,10 +70,10 @@ func (th *ThreadHandler) CreatePosts() echo.HandlerFunc {
 func (th *ThreadHandler) Vote() echo.HandlerFunc {
 	type Request struct {
 		Nickname string `json:"nickname"`
-		Voice    int8   `json:"voice"`
+		Voice    int    `json:"voice"`
 	}
 
-	voiceIsValid := func(value int8) bool {
+	voiceIsValid := func(value int) bool {
 		return value == 1 || value == -1
 	}
 

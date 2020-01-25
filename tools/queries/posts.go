@@ -1,8 +1,7 @@
 package queries
 
 const (
-	InsertIntoPosts = "INSERT INTO posts (author, forum, thread, message, parent, created_at) " +
-		"VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+	InsertIntoPosts = "INSERT INTO posts (id, author, forum, thread, message, parent, created_at, path) VALUES "
 
 	SelectPostByThreadAndID = "SELECT id, forum, thread, author, message, parent, is_edited, created_at " +
 		"FROM posts WHERE thread = $1 AND id = $2"
@@ -15,7 +14,7 @@ const (
 
 	SelectPostsByThreadTree = "SELECT posts.id, posts.author, posts.forum, posts.thread, " +
 		"posts.message, posts.parent, posts.is_edited, posts.created_at " +
-		"FROM posts %s posts.thread = $1 ORDER BY posts.path %s LIMIT %s"
+		"FROM posts %s posts.thread = $1 ORDER BY posts.path[1] %s, posts.path %s LIMIT %s"
 
 	SelectPostsByThreadParentTree = "WITH roots AS (" +
 		"SELECT id, author, forum, thread, message, parent, is_edited, created_at, path, " +
@@ -23,6 +22,10 @@ const (
 		"FROM posts WHERE thread = $1" +
 		") SELECT roots.id, roots.author, roots.forum, roots.thread, roots.message, " +
 		"roots.parent, roots.is_edited, roots.created_at FROM roots %s"
+
+	SelectParentTree = "SELECT p.id, p.author, p.forum, p.thread, p.message, p.parent, p.is_edited, p.created_at " +
+		"FROM posts as p WHERE p.thread = $1 AND " +
+		"p.path::integer[] && (SELECT ARRAY (select p.id from posts as p WHERE p.thread = $1 AND p.parent = 0 %s %s %s"
 
 	SelectPostWhereID = "SELECT P.author AS post_author, P.created_at AS post_created, " +
 		"P.id AS post_id, P.is_edited AS post_is_edited, P.message AS post_message, " +

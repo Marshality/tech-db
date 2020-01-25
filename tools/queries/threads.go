@@ -16,4 +16,6 @@ const (
 
 	SelectThreadsWhereForumAndCreated = "SELECT id, slug, author, forum, message, title, votes, created_at FROM threads " +
 		"WHERE forum = $1 AND created_at %s $2 ORDER BY created_at %s LIMIT $3"
+
+	UpdateThreadVotes = "UPDATE threads SET votes = votes + $1 WHERE id = $2"
 )

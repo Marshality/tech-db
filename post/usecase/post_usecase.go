@@ -1,12 +1,10 @@
 package usecase
 
 import (
-	"errors"
 	"github.com/Marshality/tech-db/models"
 	"github.com/Marshality/tech-db/post"
 	"github.com/Marshality/tech-db/thread"
 	"github.com/Marshality/tech-db/user"
-	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -30,25 +28,16 @@ func (pu *PostUsecase) CreatePosts(posts *models.Posts, slugOrID string) error {
 		return err
 	}
 
-	forumID := t.Forum
+	forum := t.Forum
 	threadID := t.ID
 	createdAt := time.Now().Format(time.RFC3339)
 
-	for _, p := range *posts {
-		if p.Parent != 0 {
-			if _, err := pu.postRepo.SelectByThreadAndID(p.Parent, threadID); err != nil {
-				logrus.Info(err)
-				return errors.New("conflict")
-			}
-		}
+	if len(*posts) == 0 {
+		return nil
+	}
 
-		p.Forum = forumID
-		p.Thread = threadID
-		p.CreatedAt = createdAt
-
-		if err := pu.postRepo.Insert(p); err != nil {
-			return err
-		}
+	if err := pu.postRepo.Insert(posts, forum, threadID, createdAt); err != nil {
+		return err
 	}
 
 	return nil

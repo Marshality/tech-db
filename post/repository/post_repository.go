@@ -2,15 +2,19 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/Marshality/tech-db/models"
 	"github.com/Marshality/tech-db/post"
 	. "github.com/Marshality/tech-db/tools"
 	"github.com/Marshality/tech-db/tools/queries"
 	"log"
+	"sync"
 )
 
 type PostRepository struct {
 	db *sql.DB
+	mux sync.Mutex
 }
 
 func NewPostRepository(conn *sql.DB) post.Repository {
@@ -19,8 +23,81 @@ func NewPostRepository(conn *sql.DB) post.Repository {
 	}
 }
 
-func (pr *PostRepository) Insert(p *models.Post) error {
-	return pr.db.QueryRow(queries.InsertIntoPosts, p.Author, p.Forum, p.Thread, p.Message, p.Parent, p.CreatedAt).Scan(&p.ID)
+func (pr *PostRepository) Insert(posts *models.Posts, forum string, threadID uint64, createdAt string) error {
+	query := queries.InsertIntoPosts
+
+	for i, p := range *posts {
+		u := &models.User{}
+
+		if err := pr.db.QueryRow(queries.SelectUserWhereNickname, p.Author).Scan(&u.ID, &u.Nickname, &u.Fullname, &u.Email, &u.About); err != nil {
+			return err
+		}
+
+		p.Forum = forum
+		p.Thread = threadID
+		p.CreatedAt = createdAt
+		p.Author = u.Nickname
+
+		if p.Parent != 0 {
+			if _, err := pr.SelectByThreadAndID(p.Parent, threadID); err != nil {
+				return errors.New("conflict")
+			}
+
+			query += fmt.Sprintf("(nextval('post_id_seq'::regclass)," +
+				"'%s', '%s', %d, '%s', %d, '%s', (SELECT path FROM posts WHERE id = %d AND thread = %d) || " +
+				"currval(pg_get_serial_sequence('posts', 'id'))::bigint) ",
+				p.Author, p.Forum, p.Thread, p.Message, p.Parent, p.CreatedAt, p.Parent, p.Thread)
+		} else {
+			query += fmt.Sprintf("(nextval('post_id_seq'::regclass)," +
+				"'%s', '%s', %d, '%s', %d, '%s', ARRAY[currval(pg_get_serial_sequence('posts', 'id'))::bigint]) ",
+				p.Author, p.Forum, p.Thread, p.Message, p.Parent, p.CreatedAt)
+		}
+
+
+		if i < len(*posts) - 1 {
+			query += ", "
+		}
+	}
+
+	query += "RETURNING id"
+
+	pr.mux.Lock()
+	rows, err := pr.db.Query(query)
+	pr.mux.Unlock()
+
+	if err != nil {
+		return err
+	}
+
+	if _, err := pr.db.Exec("UPDATE forums SET posts = posts + $1 WHERE slug = $2", len(*posts), forum); err != nil {
+		return err
+	}
+
+	var lastInsertedID uint64
+	for rows.Next() {
+		if err := rows.Scan(&lastInsertedID); err != nil {
+			return err
+		}
+	}
+
+	query = "INSERT INTO user_forum(forum_slug, user_id) VALUES "
+	for i, p := range *posts {
+		p.ID = lastInsertedID - uint64(len(*posts) - 1 - i)
+
+		if i != 0 {
+			query += " , "
+		}
+
+		query += fmt.Sprintf(" ('%s', (SELECT id FROM users WHERE nickname = '%s')) ", forum, p.Author)
+	}
+
+	query += " ON CONFLICT DO NOTHING "
+
+	if _, err := pr.db.Exec(query); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (pr *PostRepository) SelectByThreadAndID(id, thread uint64) (*models.Post, error) {

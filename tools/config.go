@@ -11,6 +11,7 @@ type Config struct {
 		Name     string `json:"name"`
 		Host     string `json:"host"`
 		Port     string `json:"port"`
+		User     string `json:"user"`
 		Password string `json:"password"`
 	} `json:"database"`
 

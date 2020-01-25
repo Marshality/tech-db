@@ -6,7 +6,7 @@ drop table if exists threads cascade;
 drop table if exists posts cascade;
 drop table if exists vote cascade;
 
-create table users
+create unlogged table users
 (
     id       bigserial not null,
     nickname citext    not null primary key,
@@ -15,7 +15,7 @@ create table users
     about    text
 );
 
-create table forums
+create unlogged table forums
 (
     id      bigserial not null,
     posts   integer   not null default 0,
@@ -25,7 +25,7 @@ create table forums
     usr     citext    not null references users (nickname)
 );
 
-create table threads
+create unlogged table threads
 (
     id         bigserial not null primary key,
     slug       citext    not null,
@@ -48,7 +48,7 @@ create table user_forum
     primary key (forum_slug, user_id)
 );
 
-create index index_on_forum_user on user_forum (forum_slug);
+create index on user_forum (forum_slug);
 
 drop function if exists threadsCounter;
 create or replace function threadsCounter()
@@ -74,9 +74,9 @@ create trigger threadsIncrementer
     for each row
 execute procedure threadsCounter();
 
-create table posts
+create unlogged table posts
 (
-    id         bigserial not null primary key,
+    id         integer   not null primary key,
     forum      citext    not null references forums (slug),
     thread     bigint    not null references threads (id),
     author     citext    not null references users (nickname),
@@ -87,61 +87,21 @@ create table posts
     path       bigint array
 );
 
+CREATE SEQUENCE post_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE post_id_seq OWNED BY posts.id;
+SELECT pg_catalog.setval('post_id_seq', 1, false);
+
 create index on posts (thread);
+create index ON posts using gin (path);
 
-drop function if exists postsCounter;
-create or replace function postsCounter()
-    returns trigger as
-$$
-begin
-    insert into user_forum (forum_slug, user_id)
-    values (new.forum, (select id from users where nickname = new.author))
-    on conflict do nothing;
-
-    update forums
-    set posts = posts + 1
-    where slug = new.forum;
-
-    return null;
-end;
-$$ language plpgsql;
-
-drop trigger if exists postsIncrementer on threads;
-create trigger postsIncrementer
-    after insert
-    on posts
-    for each row
-execute procedure postsCounter();
-
--- post path
-drop function if exists setPath;
-create or replace function setPath()
-    returns trigger as
-$$
-begin
-    if new.parent = 0 THEN
-        UPDATE posts
-        SET path = ARRAY [new.id]
-        WHERE id = new.id;
-    ELSE
-        UPDATE posts
-        SET path = array_append((SELECT path FROM posts WHERE id = new.parent), new.id)
-        WHERE id = new.id;
-    END IF;
-    RETURN new;
-END;
-$$
-    LANGUAGE plpgsql;
-
-drop trigger if exists pathSetter on posts;
-create trigger pathSetter
-    after insert
-    ON posts
-    FOR EACH ROW
-EXECUTE PROCEDURE setPath();
--- post path
-
-create table vote
+create unlogged table vote
 (
     id       bigserial primary key,
     thread   integer not null references threads (id),
@@ -150,47 +110,8 @@ create table vote
     constraint unique_vote unique (nickname, thread)
 );
 
-create index on vote (thread, nickname);
-
-drop function if exists voteInsert cascade;
-create or replace function voteInsert()
-    returns trigger as
-$$
-begin
-    update threads
-    set votes = votes + new.voice
-    where id = new.thread;
-
-    return null;
-end;
-$$ language plpgsql;
-
-drop trigger if exists voteInserter on threads cascade;
-create trigger voteInserter
-    after insert
-    on vote
-    for each row
-execute procedure voteInsert();
-
-drop function if exists voteUpdate cascade;
-create or replace function voteUpdate()
-    returns trigger as
-$$
-begin
-    update threads
-    set votes = votes - old.voice + new.voice
-    where id = new.thread;
-
-    return null;
-end;
-$$ language plpgsql;
-
-drop trigger if exists voteUpdater on threads cascade;
-create trigger voteUpdater
-    after update
-    on vote
-    for each row
-execute procedure voteUpdate();
+-- create index on vote (thread, nickname);
 
 select id, path
 from posts;
+

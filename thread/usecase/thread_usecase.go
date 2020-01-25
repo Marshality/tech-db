@@ -7,7 +7,6 @@ import (
 	"github.com/Marshality/tech-db/thread"
 	. "github.com/Marshality/tech-db/tools"
 	"github.com/Marshality/tech-db/user"
-	"github.com/lib/pq"
 	"strconv"
 	"time"
 )
@@ -47,16 +46,6 @@ func (tu *ThreadUsecase) GetByID(id uint64) (*models.Thread, error) {
 }
 
 func (tu *ThreadUsecase) Create(t *models.Thread) error {
-	frm, err := tu.forumUcase.GetBySlug(t.Forum)
-
-	if err != nil {
-		return err
-	}
-
-	if t.Forum != frm.Slug {
-		t.Forum = frm.Slug
-	}
-
 	usr, err := tu.userUcase.GetByNickname(t.Author)
 
 	if err != nil {
@@ -65,6 +54,16 @@ func (tu *ThreadUsecase) Create(t *models.Thread) error {
 
 	if t.Author != usr.Nickname { // на случай, если не совпадает регистр букв
 		t.Author = usr.Nickname
+	}
+
+	frm, err := tu.forumUcase.GetBySlug(t.Forum)
+
+	if err != nil {
+		return err
+	}
+
+	if t.Forum != frm.Slug {
+		t.Forum = frm.Slug
 	}
 
 	if t.Slug != "" {
@@ -131,18 +130,34 @@ func (tu *ThreadUsecase) Vote(v *models.Vote, slugOrID string) (*models.Thread, 
 
 	v.Thread = t.ID
 
-	if err = tu.threadRepo.InsertVote(v); err != nil {
-		psqlError, ok := err.(*pq.Error)
+	oldVote, err := tu.threadRepo.SelectVote(v.Nickname, t.ID)
 
-		if !ok {
+	if err != nil && err == ErrNotFound {
+		if err = tu.threadRepo.InsertVote(v); err != nil {
+			return nil, err
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if oldVote != nil {
+		if err = tu.threadRepo.UpdateVote(v); err != nil {
 			return nil, err
 		}
 
-		if psqlError.Code != "23505" {
-			return nil, err
+		if v.Voice == 1 && oldVote.Voice == -1 {
+			v.Voice = 2
+		} else if v.Voice == -1 && oldVote.Voice == 1 {
+			v.Voice = -2
+		} else {
+			v.Voice = 0
 		}
+	}
 
-		if err := tu.threadRepo.UpdateVote(v); err != nil {
+	if v.Voice != 0 {
+		if err := tu.threadRepo.UpdateVoteCount(v); err != nil {
 			return nil, err
 		}
 	}

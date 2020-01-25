@@ -24,8 +24,34 @@ func (tr *ThreadRepository) UpdateVote(v *models.Vote) error {
 	return err
 }
 
+func (tr *ThreadRepository) SelectVote(nickname string, thread uint64) (*models.Vote, error) {
+	v := &models.Vote{}
+
+	if err := tr.db.QueryRow(queries.SelectVote, nickname, thread).Scan(&v.ID, &v.Nickname, &v.Thread, &v.Voice); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return v, nil
+}
+
+func (tr *ThreadRepository) UpdateVoteCount(v *models.Vote) error {
+	_, err := tr.db.Exec(queries.UpdateThreadVotes, v.Voice, v.Thread)
+	return err
+}
+
 func (tr *ThreadRepository) InsertVote(v *models.Vote) error {
-	return tr.db.QueryRow(queries.InsertVote, v.Thread, v.Nickname, v.Voice).Scan(&v.ID)
+	if err := tr.db.QueryRow(queries.InsertVote, v.Thread, v.Nickname, v.Voice).Scan(&v.ID); err != nil {
+		if err == sql.ErrNoRows {
+			return ErrNotFound
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (tr *ThreadRepository) SelectBySlug(slug string) (*models.Thread, error) {

@@ -23,21 +23,47 @@ import (
 	"github.com/labstack/echo"
 	_ "github.com/lib/pq"
 	"log"
+	"os"
 )
 
 func main() {
-	config, err := tools.LoadConfiguration("config.json")
+	var config *tools.Config
+	var connection string
+	var err error
+
+	mode := os.Getenv("APP_ENV")
+
+	if mode == "dev" {
+		config, err = tools.LoadConfiguration("config.json")
+		connection = "host=%s port=%s dbname=%s sslmode=disable"
+	} else {
+		config, err = tools.LoadConfiguration("docker.json")
+		connection = "user=%s password=%s host=%s port=%s dbname=%s sslmode=disable"
+	}
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dbConn, err := sql.Open("postgres",
-		fmt.Sprintf("host=%s port=%s dbname=%s sslmode=disable",
-			config.Database.Host,
-			config.Database.Port,
-			config.Database.Name),
-	)
+	var dbConn *sql.DB
+
+	if mode == "dev" {
+		dbConn, err = sql.Open("postgres",
+			fmt.Sprintf(connection,
+				config.Database.Host,
+				config.Database.Port,
+				config.Database.Name),
+		)
+	} else {
+		dbConn, err = sql.Open("postgres",
+			fmt.Sprintf(connection,
+				config.Database.User,
+				config.Database.Password,
+				config.Database.Host,
+				config.Database.Port,
+				config.Database.Name),
+		)
+	}
 
 	if err != nil {
 		log.Fatal(err)
