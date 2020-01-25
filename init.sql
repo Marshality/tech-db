@@ -18,9 +18,9 @@ create table users
 create table forums
 (
     id      bigserial not null,
-    posts   integer       not null default 0,
+    posts   integer   not null default 0,
     slug    citext    not null primary key,
-    threads integer     not null default 0,
+    threads integer   not null default 0,
     title   varchar   not null,
     usr     citext    not null references users (nickname)
 );
@@ -36,6 +36,9 @@ create table threads
     votes      integer     default 0,
     created_at timestamptz default now()
 );
+
+create index on threads (slug);
+create index on threads (created_at, forum);
 
 drop table if exists user_forum cascade;
 create table user_forum
@@ -78,11 +81,13 @@ create table posts
     thread     bigint    not null references threads (id),
     author     citext    not null references users (nickname),
     message    text,
-    parent     integer       not null default 0,
+    parent     integer   not null default 0,
     is_edited  bool      not null default false,
     created_at timestamptz        default now(),
     path       bigint array
 );
+
+create index on posts (thread);
 
 drop function if exists postsCounter;
 create or replace function postsCounter()
@@ -139,12 +144,13 @@ EXECUTE PROCEDURE setPath();
 create table vote
 (
     id       bigserial primary key,
-    thread   integer    not null references threads (id),
-    nickname citext not null references users (nickname),
-    voice    integer    not null
+    thread   integer not null references threads (id),
+    nickname citext  not null references users (nickname),
+    voice    integer not null,
+    constraint unique_vote unique (nickname, thread)
 );
 
-create unique index on vote (thread, nickname);
+create index on vote (thread, nickname);
 
 drop function if exists voteInsert cascade;
 create or replace function voteInsert()
